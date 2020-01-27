@@ -58,13 +58,7 @@ module.exports = class Server {
         });
 
         //Preform lobby clean up
-        let currentLobbyIndex = connection.player.lobby;
-        server.lobbys[currentLobbyIndex].onLeaveLobby(connection);
-
-        if (currentLobbyIndex != 0 && server.lobbys[currentLobbyIndex].connections.length == 0) {
-            console.log('Closing down lobby (' + currentLobbyIndex + ')');
-            server.lobbys.splice(currentLobbyIndex, 1);
-        }
+        server.lobbys[connection.player.lobby].onLeaveLobby(connection);
     }
 
     onAttemptToJoinGame(connection = Connection) {
@@ -93,7 +87,7 @@ module.exports = class Server {
         //All game lobbies full or we have never created one
         if(!lobbyFound) {
             console.log('Making a new game lobby');
-            let gamelobby = new GameLobby(gameLobbies.length + 1, new GameLobbySettings('FFA', 1));
+            let gamelobby = new GameLobby(gameLobbies.length + 1, new GameLobbySettings('FFA', 2));
             server.lobbys.push(gamelobby);
             server.onSwitchLobby(connection, gamelobby.id);
         }
