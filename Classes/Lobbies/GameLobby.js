@@ -2,11 +2,13 @@ let LobbyBase = require('./LobbyBase')
 let GameLobbySettings = require('./GameLobbySettings')
 let Connection = require('../Connection')
 let Bullet = require('../Bullet')
+let LobbyState = require('../Utility/LobbyState')
 
 module.exports = class GameLobbby extends LobbyBase {
     constructor(id, settings = GameLobbySettings) {
         super(id);
         this.settings = settings;
+        this.lobbyState = new LobbyState();
         this.bullets = [];
     }
 
@@ -31,10 +33,25 @@ module.exports = class GameLobbby extends LobbyBase {
 
     onEnterLobby(connection = Connection) {
         let lobby = this;
+        let socket = connection.socket;
 
         super.onEnterLobby(connection);
 
-        lobby.addPlayer(connection);
+        //lobby.addPlayer(connection);
+
+        if (lobby.connections.length == lobby.settings.maxPlayers) {
+            console.log('We have enough players we can start the game');
+            lobby.lobbyState.currentState = lobby.lobbyState.GAME;
+            lobby.onSpawnAllPlayersIntoGame();
+        }
+
+        let returnData = {
+            state: lobby.lobbyState.currentState
+        };
+
+        socket.emit('loadGame');
+        socket.emit('lobbyUpdate', returnData);
+        socket.broadcast.to(lobby.id).emit('lobbyUpdate', returnData);
 
         //Handle spawning any server spawned objects here
         //Example: loot, perhaps flying bullets etc
@@ -49,6 +66,15 @@ module.exports = class GameLobbby extends LobbyBase {
 
         //Handle unspawning any server spawned objects here
         //Example: loot, perhaps flying bullets etc
+    }
+
+    onSpawnAllPlayersIntoGame() {
+        let lobby = this;
+        let connections = lobby.connections;
+
+        connections.forEach(connection => {
+            lobby.addPlayer(connection);
+        });
     }
 
     updateBullets() {
@@ -205,7 +231,7 @@ module.exports = class GameLobbby extends LobbyBase {
         }
 
         socket.emit('spawn', returnData); //tell myself I have spawned
-        socket.broadcast.to(lobby.id).emit('spawn', returnData); // Tell others
+        //socket.broadcast.to(lobby.id).emit('spawn', returnData); // Tell others
 
         //Tell myself about everyone else already in the lobby
         connections.forEach(c => {
